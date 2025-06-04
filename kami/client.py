@@ -20,8 +20,28 @@ from .types import (
 load_dotenv()
 
 
+def get_client(
+    conn_limit: int = None,  # pyright: ignore[reportArgumentType]
+    limit_per_host: int = None,  # pyright: ignore[reportArgumentType]
+) -> aiohttp.ClientSession:
+    if not conn_limit:
+        conn_limit = 256
+    if not limit_per_host:
+        limit_per_host = 10
+
+    return aiohttp.ClientSession(
+        connector=aiohttp.TCPConnector(
+            ssl=False,
+            limit=conn_limit,
+            limit_per_host=limit_per_host,
+            enable_cleanup_closed=True,
+            use_dns_cache=False,
+        )
+    )
+
+
 def resolve_env_var(env_var: str, default_value: str):
-    value: str = None  # type: ignore[assignment]
+    value: str = None  # pyright: ignore[reportAssignmentType]
     env_value = os.getenv(env_var, None)
     if env_value:
         value = env_value
@@ -39,7 +59,12 @@ class KamiClient:
     Kami is a class that handles the connection to the Kami API.
     """
 
-    def __init__(self, host: str = None, port: str = None):  # type: ignore[assignment]
+    def __init__(
+        self,
+        host: str = None,  # type: ignore[assignment]
+        port: str = None,  # type: ignore[assignment]
+        session: aiohttp.ClientSession | None = None,
+    ):  # type: ignore[assignment]
         _host = host or resolve_env_var("KAMI_HOST", "localhost")
         if not _host:
             raise ValueError("Could not resolve Kami host")
@@ -49,22 +74,35 @@ class KamiClient:
             raise ValueError("Could not resolve Kami port")
 
         self.url = f"http://{_host}:{_port}"
-        self.session: aiohttp.ClientSession | None = None
+        self.session: aiohttp.ClientSession | None = session or get_client()
         self.headers = {
             "Content-Type": "application/json",
             "Accept": "application/json",
         }
 
     async def _ensure_session(self):
-        if self.session is None:
-            self.session = aiohttp.ClientSession()
+        if self.session is not None and not self.session.closed:
+            try:
+                await self.session.close()
+            except Exception as e:
+                logger.warning(f"Error closing session: {e}")
+            finally:
+                # set to None even if closing failed!!!
+                # to prevent reusing a potentially corrupted session
+                self.session = None
+        self.session = get_client()
 
     async def close(self):
         """
         Close the aiohttp session.
         """
-        if self.session is not None:
-            await self.session.close()
+        if self.session is not None and not self.session.closed:
+            try:
+                await self.session.close()
+            except Exception as e:
+                logger.warning(f"Error closing session: {e}")
+            finally:
+                self.session = None
 
     async def get(
         self, endpoint: str, params: Dict[str, Any] | None = None
@@ -80,24 +118,30 @@ class KamiClient:
             Dict[str, Any]: The JSON response from the API.
         """
         try:
-            await self._ensure_session()
-            if self.session is None:
-                raise ValueError("Session is not initialized.")
-            url = f"{self.url}/{endpoint}"
-            async with self.session.get(
-                url, headers=self.headers, params=params
-            ) as response:
-                return await response.json()
-        except aiohttp.ClientError as e:
-            message = f"Error connecting to Kami API: {e}"
-            logger.error(message)
-            raise RuntimeError(f"Error connecting to Kami API: {e}") from e
-        except json.decoder.JSONDecodeError as e:
-            logger.error(f"Error decoding JSON response: {e}")
-            raise e
+            try:
+                await self._ensure_session()
+                if self.session is None:
+                    raise ValueError("Session is not initialized.")
+                url = f"{self.url}/{endpoint}"
+                async with self.session.get(
+                    url, headers=self.headers, params=params
+                ) as response:
+                    return await response.json()
+            except aiohttp.ClientError as e:
+                message = f"Error connecting to Kami API: {e}"
+                logger.error(message)
+                raise RuntimeError(f"Error connecting to Kami API: {e}") from e
+            except json.decoder.JSONDecodeError as e:
+                logger.error(f"Error decoding JSON response: {e}")
+                raise e
+            except Exception as e:
+                logger.error(f"Unexpected error: {e}")
+                raise e
         except Exception as e:
-            logger.error(f"Unexpected error: {e}")
-            raise e
+            logger.error(f"Error occurred: {e}, forcibly closing connection")
+            await self.close()
+
+        return {}
 
     async def post(
         self, endpoint: str, data: Dict[str, Any] | None = None
@@ -113,24 +157,30 @@ class KamiClient:
             Dict[str, Any]: The JSON response from the API.
         """
         try:
-            await self._ensure_session()
-            if self.session is None:
-                raise ValueError("Session is not initialized.")
-            url = f"{self.url}/{endpoint}"
-            async with self.session.post(
-                url, headers=self.headers, json=data
-            ) as response:
-                return await response.json()
-        except aiohttp.ClientError as e:
-            message = f"Error connecting to Kami API: {e}"
-            logger.error(message)
-            raise RuntimeError(message) from e
-        except json.decoder.JSONDecodeError as e:
-            logger.error(f"Error decoding JSON response: {e}")
-            raise e
+            try:
+                await self._ensure_session()
+                if self.session is None:
+                    raise ValueError("Session is not initialized.")
+                url = f"{self.url}/{endpoint}"
+                async with self.session.post(
+                    url, headers=self.headers, json=data
+                ) as response:
+                    return await response.json()
+            except aiohttp.ClientError as e:
+                message = f"Error connecting to Kami API: {e}"
+                logger.error(message)
+                raise RuntimeError(message) from e
+            except json.decoder.JSONDecodeError as e:
+                logger.error(f"Error decoding JSON response: {e}")
+                raise e
+            except Exception as e:
+                logger.error(f"Unexpected error: {e}")
+                raise e
         except Exception as e:
-            logger.error(f"Unexpected error: {e}")
-            raise e
+            logger.error(f"Error occurred: {e}, forcibly closing connection")
+            await self.close()
+
+        return {}
 
     async def get_metagraph(self, netuid: int) -> SubnetMetagraph:
         """
