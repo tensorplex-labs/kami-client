@@ -20,6 +20,24 @@ from .types import (
 load_dotenv()
 
 
+def get_client(
+    conn_limit: int = None, limit_per_host: int = None
+) -> aiohttp.ClientSession:  # type: ignore[assignment]
+    if not conn_limit:
+        conn_limit = 256
+    if not limit_per_host:
+        limit_per_host = 10
+
+    return aiohttp.ClientSession(
+        connector=aiohttp.TCPConnector(
+            ssl=False,
+            limit=conn_limit,
+            limit_per_host=limit_per_host,
+            enable_cleanup_closed=True,
+        )
+    )
+
+
 def resolve_env_var(env_var: str, default_value: str):
     value: str = None  # type: ignore[assignment]
     env_value = os.getenv(env_var, None)
@@ -56,15 +74,15 @@ class KamiClient:
         }
 
     async def _ensure_session(self):
-        if self.session is None:
-            self.session = aiohttp.ClientSession()
+        """Recreate session if it's closed"""
+        if not self.session or self.session.closed:
+            self.session = get_client()
 
     async def close(self):
-        """
-        Close the aiohttp session.
-        """
-        if self.session is not None:
+        try:
             await self.session.close()
+        except Exception:
+            pass
 
     async def get(
         self, endpoint: str, params: Dict[str, Any] | None = None
