@@ -5,6 +5,7 @@ import os
 import aiohttp
 from bittensor_drand import get_encrypted_commit  # type: ignore
 from loguru import logger
+from dotenv import load_dotenv
 
 
 from .types import (
@@ -15,6 +16,8 @@ from .types import (
     SubnetHyperparameters,
     SubnetMetagraph,
 )
+
+load_dotenv()
 
 
 def resolve_env_var(env_var: str, default_value: str):
