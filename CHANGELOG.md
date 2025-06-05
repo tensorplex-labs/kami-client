@@ -1,3 +1,10 @@
+## 🚀 v1.1.0 (2025-06-05)
+
+
+### ✨ Features
+
+- **add keyring pair info** ([`13fbc60`](kami-client/commit/13fbc6042d122e7985163b7420ae9237847a3d9f)) @jarvis8x7b
+
 ## 🚀 v1.0.0 (2025-06-04)
 
 
