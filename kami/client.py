@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 from .types import (
     AxonInfo,
     CommitRevealPayload,
+    KeyringPair,
     ServeAxonPayload,
     SetWeightsPayload,
     SubnetHyperparameters,
@@ -356,3 +357,18 @@ class KamiClient:
             )
 
         return is_valid
+
+    async def get_keyringpair(self) -> KeyringPair:
+        """Get the keyring pair info based on WALLET_COLDKEY and WALLET_HOTKEY set in environment variables"""
+        response = await self.get("substrate/keyring-pair-info")
+        if error := response.get("error"):
+            raise ValueError(
+                f"Error occurred while trying to get keyring pair: {error}"
+            )
+        response_data = response.get("data", {})
+        hotkey = response_data.get("keyringPair", {}).get("address")
+        coldkey = response_data.get("walletColdkey")
+        return KeyringPair(
+            hotkey=hotkey,
+            coldkey=coldkey,
+        )

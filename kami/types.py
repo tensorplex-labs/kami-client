@@ -257,3 +257,8 @@ class SubnetMetagraph(BaseModel):
 
     class Config:
         arbitrary_types_allowed = False
+
+
+class KeyringPair(BaseModel):
+    hotkey: str
+    coldkey: str
