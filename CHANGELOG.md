@@ -1,3 +1,10 @@
+## 🚀 v1.1.1 (2025-06-05)
+
+
+### 🔧 Misc
+
+- **configure pyproject and pypi publishing** ([`afdd610`](kami-client/commit/afdd610e958d36ff9c0d978be9e6e354d24ca245)) @jarvis8x7b
+
 ## 🚀 v1.1.0 (2025-06-05)
 
 
