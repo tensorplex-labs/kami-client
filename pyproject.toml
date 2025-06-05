@@ -8,10 +8,10 @@ dynamic = ["version"]
 description = "Client library for Kami messaging system"
 readme = "README.md"
 requires-python = ">=3.11"
-license = {text = "MIT"}
+license = { text = "MIT" }
 authors = [
-  {name = "tensorplex-validator", email = "validator@tensorplex.ai"}
-  {name = "jarvis8x7b", email = "jarvis@tensorplex.ai"}
+  { name = "tensorplex-validator", email = "validator@tensorplex.ai" },
+  { name = "jarvis8x7b", email = "jarvis@tensorplex.ai" },
 ]
 classifiers = [
   "Development Status :: 3 - Alpha",
@@ -26,20 +26,16 @@ classifiers = [
 ]
 keywords = ["kami", "client", "python"]
 dependencies = [
-    "aiohttp~=3.10.11",
-    "tenacity~=8.5.0",
-    "pydantic~=2.8.2",
-    "loguru~=0.7.2",
-    "bittensor-drand==0.5.0",
-    "python-dotenv"
+  "aiohttp~=3.10.11",
+  "tenacity~=8.5.0",
+  "pydantic~=2.8.2",
+  "loguru~=0.7.2",
+  "bittensor-drand==0.5.0",
+  "python-dotenv",
 ]
 
 [project.optional-dependencies]
-dev = [
-    "pylint",
-    "ruff",
-    "pyright"
-]
+dev = ["pylint", "ruff", "pyright"]
 
 [project.urls]
 "Homepage" = "https://github.com/tensorplex-labs/kami-client"
@@ -54,4 +50,3 @@ include = ["kami*"]
 version_scheme = "only-version"
 local_scheme = "no-local-version"
 tag_regex = "^v(?P<scm_version>\\d+\\.\\d+\\.\\d+)"
-
