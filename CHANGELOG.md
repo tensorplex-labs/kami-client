@@ -1,3 +1,14 @@
+## 🚀 v1.1.2 (2025-06-05)
+
+
+### 🐛 Bug Fixes
+
+- **publish to right pypi project** ([`17caa5d`](kami-client/commit/17caa5df53365d6cfb2942d43796899cee57358c)) @jarvis8x7b
+
+### 🔧 Misc
+
+- **taplo format** ([`9f18199`](kami-client/commit/9f1819968e078e0b467a5ba0f41cc3b986796e91)) @jarvis8x7b
+
 ## 🚀 v1.1.1 (2025-06-05)
 
 
