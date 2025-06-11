@@ -1,3 +1,12 @@
+## 🚀 v1.1.3 (2025-06-11)
+
+
+- **Merge pull request #1 from tensorplex-labs/perf/retries-err-handling** ([`6f09214`](kami-client/commit/6f0921471484d22c1730363108e7ef039ebac52b)) ([#1](kami-client/issues/1)) @jarvis8x7b
+
+### 🥷 Performance Improvements
+
+- **client retries and err handling** ([`291912d`](kami-client/commit/291912d23ad58b29191e351e1a063b2ade25d2b6)) @jarvis8x7b
+
 ## 🚀 v1.1.2 (2025-06-05)
 
 
