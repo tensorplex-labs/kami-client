@@ -1,13 +1,15 @@
 import json
 from typing import Any, Dict
+from functools import wraps
 
 import os
 import aiohttp
 from bittensor_drand import get_encrypted_commit  # type: ignore
 from loguru import logger
 from dotenv import load_dotenv
+from tenacity import retry, stop_after_attempt, wait_exponential, before_sleep_log
 
-
+from .exceptions import KamiAPIError
 from .types import (
     AxonInfo,
     CommitRevealPayload,
@@ -21,8 +23,67 @@ from .types import (
 load_dotenv()
 
 
+def check_response_for_error(response_data: Dict[str, Any]) -> None:
+    """Check if the response contains an error field and raise KamiAPIError if found."""
+    if "error" in response_data and response_data["error"]:
+        error_data = response_data.get("error")
+        error_type = None
+        if isinstance(error_data, str):
+            error_message = error_data
+        elif isinstance(error_data, dict):
+            error_message = error_data.get("message", str(error_data))
+            error_type = error_data.get("type")
+        else:
+            error_message = str(error_data)
+        raise KamiAPIError(error_message, error_type)
+
+    if "statusCode" in response_data and not (
+        200 <= response_data["statusCode"] <= 299
+    ):
+        status_code = response_data["statusCode"]
+        message = response_data.get("message", "")
+        error_message = f"HTTP error: {status_code}" + (
+            f" - {message}" if message else ""
+        )
+        raise KamiAPIError(error_message)
+
+
+def retry_on_error(
+    max_retries: int = 10,
+    multiplier: float = 1.5,
+    min_wait: float = 1.0,
+    max_wait: float = 10.0,
+):
+    """Decorator that adds tenacity retry logic and checks for API errors in response.
+
+    Args:
+        max_retries: Maximum number of retry attempts (default: 10)
+        multiplier: Exponential backoff multiplier (default: 1.5)
+        min_wait: Minimum wait time in seconds (default: 1.0)
+        max_wait: Maximum wait time in seconds (default: 10.0)
+    """
+
+    def decorator(func):
+        @wraps(func)
+        @retry(
+            stop=stop_after_attempt(max_retries),
+            wait=wait_exponential(multiplier=multiplier, min=min_wait, max=max_wait),
+            before_sleep=before_sleep_log(logger, "WARNING"),
+            reraise=True,
+        )
+        async def wrapper(*args, **kwargs):
+            response = await func(*args, **kwargs)
+            check_response_for_error(response)
+            return response
+
+        return wrapper
+
+    return decorator
+
+
 def get_client(
-    conn_limit: int = None, limit_per_host: int = None
+    conn_limit: int = None,
+    limit_per_host: int = None,  # pyright: ignore[reportArgumentType]
 ) -> aiohttp.ClientSession:  # type: ignore[assignment]
     if not conn_limit:
         conn_limit = 256
@@ -85,6 +146,7 @@ class KamiClient:
         except Exception:
             pass
 
+    @retry_on_error(multiplier=1.5)
     async def get(
         self, endpoint: str, params: Dict[str, Any] | None = None
     ) -> Dict[str, Any]:
@@ -107,10 +169,8 @@ class KamiClient:
                 url, headers=self.headers, params=params
             ) as response:
                 return await response.json()
-        except aiohttp.ClientError as e:
-            message = f"Error connecting to Kami API: {e}"
-            logger.error(message)
-            raise RuntimeError(f"Error connecting to Kami API: {e}") from e
+        except aiohttp.ClientError:
+            raise
         except json.decoder.JSONDecodeError as e:
             logger.error(f"Error decoding JSON response: {e}")
             raise e
@@ -118,6 +178,7 @@ class KamiClient:
             logger.error(f"Unexpected error: {e}")
             raise e
 
+    @retry_on_error(multiplier=1.5)
     async def post(
         self, endpoint: str, data: Dict[str, Any] | None = None
     ) -> Dict[str, Any]:
@@ -140,10 +201,8 @@ class KamiClient:
                 url, headers=self.headers, json=data
             ) as response:
                 return await response.json()
-        except aiohttp.ClientError as e:
-            message = f"Error connecting to Kami API: {e}"
-            logger.error(message)
-            raise RuntimeError(message) from e
+        except aiohttp.ClientError:
+            raise
         except json.decoder.JSONDecodeError as e:
             logger.error(f"Error decoding JSON response: {e}")
             raise e
