@@ -97,6 +97,18 @@ class CommitRevealPayload(BaseModel):
     commit: str
     revealRound: int
 
+class CommitTimelockedPayload(BaseModel):
+    """Payload for the commit-timelocked weight setting mechanism.
+
+    Enables a two-phase weight setting process where validators first commit
+    to their weights cryptographically, then reveal them in a later round.
+    """
+
+    netuid: int
+    commit: str
+    revealRound: int
+    commitRevealVersion: int = 4
+
 
 class MovingPrice(BaseModel):
     """Represents a moving average price with bit precision.

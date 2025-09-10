@@ -2,6 +2,7 @@ from .client import KamiClient
 from .types import (
     AxonInfo,
     CommitRevealPayload,
+    CommitTimelockedPayload,
     IdentitiesInfo,
     MovingPrice,
     ServeAxonPayload,
@@ -17,6 +18,7 @@ __all__ = [
     "ServeAxonPayload",
     "SetWeightsPayload",
     "CommitRevealPayload",
+    "CommitTimelockedPayload",
     "MovingPrice",
     "SubnetIdentity",
     "IdentitiesInfo",

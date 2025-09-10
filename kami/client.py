@@ -13,6 +13,7 @@ from .exceptions import KamiAPIError
 from .types import (
     AxonInfo,
     CommitRevealPayload,
+    CommitTimelockedPayload,
     KeyringPair,
     ServeAxonPayload,
     SetWeightsPayload,
@@ -385,6 +386,68 @@ class KamiClient:
                 data=cr_payload.model_dump(),
             )
         return await self.post("chain/set-weights", data=payload.model_dump())
+
+    async def set_timelocked_weights(self, payload: SetWeightsPayload) -> Dict[str, Any]:
+        """
+        Set weights for neurons in the network.
+
+        Handles both standard weight setting and commit-timelocked weight setting
+        based on subnet hyperparameters.
+
+        Args:
+            payload (SetWeightsPayload): The payload containing weights information.
+
+        Returns:
+            Dict[str, Any]: The JSON response from the API.
+        """
+        get_hpams: SubnetHyperparameters = await self.get_subnet_hyperparameters(
+            payload.netuid
+        )
+        if get_hpams.commitRevealWeightsEnabled:
+            tempo = get_hpams.tempo
+            reveal_period = get_hpams.commitRevealPeriod
+            if tempo == 0 or reveal_period == 0:
+                raise ValueError(
+                    "Tempo and reveal round must be greater than 0 for commit reveal weights."
+                )
+
+            logger.info(
+                f"Commit reveal weights enabled: tempo: {tempo}, reveal_period: {reveal_period}"
+            )
+
+            # Encrypt `commit_hash` with t-lock and `get reveal_round`
+            commit_for_reveal, reveal_round = get_encrypted_commit(  # type: ignore
+                uids=payload.dests,
+                weights=payload.weights,
+                version_key=payload.version_key,
+                tempo=tempo,
+                current_block=await self.get_current_block(),
+                netuid=payload.netuid,
+                subnet_reveal_period_epochs=reveal_period,
+                block_time=12.0,
+                hotkey=self.get_keyringpair().hotkey,
+            )
+
+            logger.info(f"Commit for reveal: {commit_for_reveal.hex()}")  # type: ignore
+            logger.info(f"Reveal round: {reveal_round}")
+
+            if not commit_for_reveal or not reveal_round:
+                raise ValueError(
+                    "Failed to generate commit for reveal. Ensure that tempo and reveal round are set correctly."
+                )
+
+            cr_payload: CommitTimelockedPayload = CommitTimelockedPayload(
+                netuid=payload.netuid,
+                commit=commit_for_reveal.hex(),  # type: ignore
+                revealRound=reveal_round,  # type: ignore
+                commitRevealVersion=4,
+            )
+
+            return await self.post(
+                "chain/set-timelocked-weights",
+                data=cr_payload.model_dump(),
+            )
+        raise KamiAPIError("Standard weight setting is not supported when commit-reveal is disabled")
 
     async def sign_message(self, message: str) -> str:
         response = await self.post(
