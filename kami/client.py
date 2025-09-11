@@ -425,7 +425,7 @@ class KamiClient:
                 netuid=payload.netuid,
                 subnet_reveal_period_epochs=reveal_period,
                 block_time=12.0,
-                hotkey=self.get_keyringpair().hotkey,
+                hotkey=await self.get_keyringpair().hotkey,
             )
 
             logger.info(f"Commit for reveal: {commit_for_reveal.hex()}")  # type: ignore
