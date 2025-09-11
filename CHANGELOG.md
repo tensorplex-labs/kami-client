@@ -1,3 +1,12 @@
+## 🚀 v1.2.2 (2025-09-11)
+
+
+- **Merge pull request #4 from tensorplex-labs/fix/hotkey-fix** ([`c412d47`](kami-client/commit/c412d477b7211c1c2ccdf8e37a82a6a4ab023f2a)) ([#4](kami-client/issues/4)) @codebender
+
+### 🐛 Bug Fixes
+
+- **fixed hotkey bytes from drand** ([`267bf8e`](kami-client/commit/267bf8e20e46d0c0df0e6b1791f0b1a80b55ea85)) @codebender
+
 ## 🚀 v1.2.1 (2025-09-11)
 
 
