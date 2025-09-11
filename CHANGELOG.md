@@ -1,3 +1,12 @@
+## 🚀 v1.2.1 (2025-09-11)
+
+
+- **Merge pull request #3 from tensorplex-labs/hotfix/crv4-await** ([`e075e8d`](kami-client/commit/e075e8df5b98ad50a6497a312d90ac501f6f0158)) ([#3](kami-client/issues/3)) @daemontplx
+
+### 🐛 Bug Fixes
+
+- **added await** ([`a1ba281`](kami-client/commit/a1ba28106f814c675d230be5d2bada1ef3a4436e)) @daemontplx
+
 ## 🚀 v1.2.0 (2025-09-11)
 
 
