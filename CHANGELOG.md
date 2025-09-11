@@ -1,3 +1,12 @@
+## 🚀 v1.2.0 (2025-09-11)
+
+
+- **Merge pull request #2 from tensorplex-labs/feat/crv4-weight** ([`dac67cb`](kami-client/commit/dac67cb1c1e6061eca9edb245533580e76870234)) ([#2](kami-client/issues/2)) @daemontplx
+
+### ✨ Features
+
+- **added support for crv4 weights** ([`72907e5`](kami-client/commit/72907e5818da57e0f39bfbdbfbe9a9fd4f5cbc13)) @daemontplx
+
 ## 🚀 v1.1.3 (2025-06-11)
 
 
