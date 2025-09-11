@@ -1,20 +1,20 @@
 import json
-from typing import Any, Dict
-from functools import wraps
-
 import os
+from functools import wraps
+from typing import Any, Dict
+
 import aiohttp
 from bittensor_drand import get_encrypted_commit  # type: ignore
-from loguru import logger
 from dotenv import load_dotenv
-from tenacity import retry, stop_after_attempt, wait_exponential, before_sleep_log
+from loguru import logger
+from tenacity import before_sleep_log, retry, stop_after_attempt, wait_exponential
 
 from .exceptions import KamiAPIError
 from .types import (
     AxonInfo,
     CommitRevealPayload,
     CommitTimelockedPayload,
-    KeyringPair,
+    KeyringPairInfo,
     ServeAxonPayload,
     SetWeightsPayload,
     SubnetHyperparameters,
@@ -387,7 +387,9 @@ class KamiClient:
             )
         return await self.post("chain/set-weights", data=payload.model_dump())
 
-    async def set_timelocked_weights(self, payload: SetWeightsPayload) -> Dict[str, Any]:
+    async def set_timelocked_weights(
+        self, payload: SetWeightsPayload
+    ) -> Dict[str, Any]:
         """
         Set weights for neurons in the network.
 
@@ -415,6 +417,12 @@ class KamiClient:
                 f"Commit reveal weights enabled: tempo: {tempo}, reveal_period: {reveal_period}"
             )
 
+            keypair_info: KeyringPairInfo = await self.get_keyringpair()
+            # Convert dict[str, int] to bytes
+            hotkey = bytes(
+                keypair_info.keyringPair.publicKey[str(i)] for i in range(32)
+            )
+
             # Encrypt `commit_hash` with t-lock and `get reveal_round`
             commit_for_reveal, reveal_round = get_encrypted_commit(  # type: ignore
                 uids=payload.dests,
@@ -425,7 +433,7 @@ class KamiClient:
                 netuid=payload.netuid,
                 subnet_reveal_period_epochs=reveal_period,
                 block_time=12.0,
-                hotkey=await self.get_keyringpair().hotkey,
+                hotkey=hotkey,
             )
 
             logger.info(f"Commit for reveal: {commit_for_reveal.hex()}")  # type: ignore
@@ -447,7 +455,9 @@ class KamiClient:
                 "chain/set-timelocked-weights",
                 data=cr_payload.model_dump(),
             )
-        raise KamiAPIError("Standard weight setting is not supported when commit-reveal is disabled")
+        raise KamiAPIError(
+            "Standard weight setting is not supported when commit-reveal is disabled"
+        )
 
     async def sign_message(self, message: str) -> str:
         response = await self.post(
@@ -480,17 +490,12 @@ class KamiClient:
 
         return is_valid
 
-    async def get_keyringpair(self) -> KeyringPair:
+    async def get_keyringpair(self) -> KeyringPairInfo:
         """Get the keyring pair info based on WALLET_COLDKEY and WALLET_HOTKEY set in environment variables"""
-        response = await self.get("substrate/keyring-pair-info")
-        if error := response.get("error"):
+        result = await self.get("substrate/keyring-pair-info")
+        if error := result.get("error"):
             raise ValueError(
                 f"Error occurred while trying to get keyring pair: {error}"
             )
-        response_data = response.get("data", {})
-        hotkey = response_data.get("keyringPair", {}).get("address")
-        coldkey = response_data.get("walletColdkey")
-        return KeyringPair(
-            hotkey=hotkey,
-            coldkey=coldkey,
-        )
+        keyring_pair_info = result.get("data", {})
+        return KeyringPairInfo.model_validate(keyring_pair_info)

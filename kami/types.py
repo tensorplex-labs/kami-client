@@ -97,6 +97,7 @@ class CommitRevealPayload(BaseModel):
     commit: str
     revealRound: int
 
+
 class CommitTimelockedPayload(BaseModel):
     """Payload for the commit-timelocked weight setting mechanism.
 
@@ -272,5 +273,14 @@ class SubnetMetagraph(BaseModel):
 
 
 class KeyringPair(BaseModel):
-    hotkey: str
-    coldkey: str
+    address: str
+    addressRaw: dict[str, int]
+    isLocked: bool
+    meta: dict[str, Any]
+    publicKey: dict[str, int]
+    type: str
+
+
+class KeyringPairInfo(BaseModel):
+    keyringPair: KeyringPair
+    walletColdkey: str
